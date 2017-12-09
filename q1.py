@@ -2,24 +2,24 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
-y = np.zeros(500)
-params = np.zeros(3)
-with open('mydata.csv', 'r',encoding='ascii') as datafile:
-    reader = csv.reader(datafile)
-    for i,row in enumerate(reader):
-        y[i] = row[0]
-datafile.close()
+def readData():
+    y = np.zeros(500)
+    params = np.zeros(3)
+    with open('mydata.csv', 'r',encoding='ascii') as datafile:
+        reader = csv.reader(datafile)
+        for i,row in enumerate(reader):
+            y[i] = row[0]
+    datafile.close()
 
-with open('myparameters.csv', 'r',encoding='utf8') as paramsfile:
-    reader = csv.reader(paramsfile)
-    for i,row in enumerate(reader):
-        params[i] = row[0]
-paramsfile.close()
+    with open('myparameters.csv', 'r',encoding='utf8') as paramsfile:
+        reader = csv.reader(paramsfile)
+        for i,row in enumerate(reader):
+            params[i] = row[0]
+    paramsfile.close()
 
-print(params)
+    return y, params
 
-#beta = np.random.uniform(0,2,100)
-#max_it = 10
+yt, params = readData()
 
 print(len(y))
 T = 500
