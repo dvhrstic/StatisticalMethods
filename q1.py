@@ -21,7 +21,7 @@ print(params)
 #beta = np.random.uniform(0,2,100)
 #max_it = 10
 #print(beta)
-print(len(y))
+print(len(y)
 T = 500
 xt = np.zeros(T+1)
 print(len(xt))
@@ -35,5 +35,5 @@ wt = y/xt[1:501]
 print(wt)
 
 t = np.linspace(1,501, 500)
-plt.plot(t, xt[1:501],'+')
+plt.plot(t, y,'+')
 plt.show()
