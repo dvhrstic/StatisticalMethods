@@ -50,8 +50,7 @@ def logLikelihood(xt,yt, params):
     y_var = params[2]**2 * np.exp(xt[0])
     #y_mu = 0
     #Mean mu is equal to zero and that is why it is not included in wt[]
-    #wt[0] = -1/2 * np.log(2 * np.pi * y_var) - ((yt[0])**2)/(2 * y_var)
-    wt[0] = 1
+    wt[0] = -1/2 * np.log(2 * np.pi * y_var) - ((yt[0])**2)/(2 * y_var)
     for t in range(1,len(yt)):
         y_var = params[2]*params[2] * np.exp(xt[t])
         term1 = -1/2 * len(yt[:t]) * np.log(2 * np.pi * y_var)
