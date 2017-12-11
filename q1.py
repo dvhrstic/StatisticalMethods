@@ -21,27 +21,30 @@ def readData():
 
     return y, params
 
-def generateXt():
-    T = 500
-    xt = np.zeros(T+1)
-    xt[0] = np.random.normal(0,np.sqrt(params[1] ** 2 / (1 - params[0] ** 2)))
+def generateXt(T, n_particles, params):
+    Xt = np.zeros((T+1, n_particles))
+    #Samling from stationary Xo
+    Xt[0] = np.random.normal(0,np.sqrt(params[1] ** 2 / (1 - params[0] ** 2)))
+    for i in range(n_particles):
+        Xt[0][i] = np.random.normal(0, params[1]**2 / (1 - params[0]**2))
     for t in range(1, T + 1):
-        xt[t] = np.random.normal(params[0] * xt[t - 1], params[1])
-    return xt
+        for i in range(n_particles):
+            Xt[t][i] = np.random.normal(params[0] * Xt[t-1][i], params[1]**2)
+    return Xt
 
-def calculateSMC(xt,yt, params, n_particles):
-    wt = np.ones((len(xt), n_particles))
-    wt[0] = wt[0]/n_particles
+def calculateSMC(Xt,yt, params, n_particles):
+    wt = np.ones((len(Xt), n_particles))
+    #wt[0] = wt[0]/n_particles
     #Instantiate weights randomly across 100 particles
     for i in range(n_particles):
-        y_var = params[2]**2 * np.exp(xt[0])
+        y_var = params[2]**2 * np.exp(Xt[0][i])
         wt[0][i] = np.random.uniform(1,n_particles)
     wt[0] /= np.sum(wt[0])
     #Iterate in time t, calculate weights w.r.t previous value and likelihood
-    for t in range(1,len(yt)):
-        likelihood = scipy.stats.multivariate_normal.pdf(xt[t],0, y_var)
+    for t in range(1,len(yt)+1):
         for i in range(n_particles):
-            y_var = params[2]**2 * np.exp(xt[t])
+            y_var = params[2]**2 * np.exp(Xt[t][i])
+            likelihood = scipy.stats.multivariate_normal.pdf(yt[t-1],0, y_var)
             wt[t][i] = likelihood * wt[t-1][i]
         #in order to normalize we need to divide and thereby we give som values to zeros
         wt[t] += 1.e-300
@@ -50,13 +53,15 @@ def calculateSMC(xt,yt, params, n_particles):
 
 yt, params = readData()
 #We need x in order to calculate the variance for yt
-xt = generateXt()
+T = 500
 n_particles = 100
-wt = calculateSMC(xt, yt, params, n_particles)
-max_weight = np.max(wt[2])
-particle = np.where(wt[2] == max_weight)[0][0]
-print("Max weight ",max_weight, " belongs to particle ", particle)
-#print(wt)
-print("Weights sum:",np.sum(wt[2]))
+Xt = generateXt(T, n_particles, params)
+print(len(Xt))
+Wt = calculateSMC(Xt, yt, params, n_particles)
+#max_weight = np.max(Wt[2])
+#particle = np.where(Wt[2] == max_weight)[0][0]
+#print("Max weight ",max_weight, " belongs to particle ", particle)
+#print(Wt)
+#print("Weights sum:",np.sum(wt[2]))
 plt.plot(np.linspace(1,100,n_particles), wt[2], '*')
 plt.show()
