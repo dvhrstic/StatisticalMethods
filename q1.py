@@ -1,3 +1,8 @@
+############################
+# ----------Author---------#
+# ---Dusan Viktor Hrstic---#
+# ----------2017-----------#
+############################
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,7 +30,7 @@ def readData():
 def generateXt(T, n_particles, params):
     Xt = np.zeros((T+1, n_particles))
     #Samling from stationary Xo
-    Xt[0] = np.random.normal(0,params[1] ** 2 / (1 - params[0] ** 2))
+    #Xt[0] = np.random.normal(0,params[1] ** 2 / (1 - params[0] ** 2))
     for i in range(n_particles):
         Xt[0][i] = np.random.normal(0, params[1]**2 / (1 - params[0]**2))
     for t in range(1, T + 1):
@@ -43,16 +48,18 @@ def sampleX(n_particles,params,x_prev=None):
             x_new[i] = np.random.normal(params[0] * x_prev[i], params[1]**2)
     return x_new
 
-def calculateSMC(Xt,yt, params, n_particles):
+def calculateSMC(Xt,yt, params, n_particles, beta=None):
     wt = np.ones((len(Xt), n_particles))
     #wt[0] = wt[0]/n_particles
-    #Instantiate weights randomly across 100 particles
+    #Instantiate weights with the likelihood of each X0 ~ N(0, sigma^2/(1-phi^2))
     for i in range(n_particles):
-        wt[0][i] = np.random.uniform(1,n_particles)
+        wt[0][i] = scipy.stats.multivariate_normal.pdf(Xt[0][i], 0, params[1]**2/(1 - params[0]**2))
     wt[0] /= np.sum(wt[0])
     #Iterate in time t, calculate weights w.r.t previous value and likelihood
     for t in range(1,len(yt)+1):
         for i in range(n_particles):
+            #Beta is unknown and we are sampling from uniform distribution (0, 2)
+            params[2] = np.random.uniform(0.0001, 2)
             y_var = params[2]**2 * np.exp(Xt[t][i])
             likelihood = scipy.stats.multivariate_normal.pdf(yt[t-1],0, y_var)
             wt[t][i] = likelihood * wt[t-1][i]
@@ -61,11 +68,16 @@ def calculateSMC(Xt,yt, params, n_particles):
         wt[t] /= np.sum(wt[t])
     return wt
 
-def resample(n_particles, yt, params):
+def resample(n_particles, yt, params, beta=None, betaLogLikelihood=False):
     n_observations = len(yt)
     Wt = np.ones((n_observations + 1, n_particles))
     Xt_resampled = np.ones((n_observations + 1, n_particles))
     c = np.ones(n_particles)
+
+    if type(beta).__name__ == 'float64':
+        params[2] = beta
+    else:
+        params[2] = np.random.uniform(0.001, 2)
 
     #Here we save the values of the unnormalized weights that we will need in Q5
     Wt_resampled = np.ones((n_observations + 1, n_particles))
@@ -93,13 +105,20 @@ def resample(n_particles, yt, params):
         offset = offset + 1/n_particles
 
     for t in range(1, n_observations+1):
+        if type(beta).__name__ == 'float64':
+            params[2] = beta
+        else:
+            params[2] = np.random.uniform(0.001, 2)
+
         Xt_resampled[t] = sampleX(n_particles,params, Xt_resampled[t-1])
+
         for i in range(n_particles):
+
             y_var = params[2]**2 * np.exp(Xt_resampled[t][i])
             likelihood = scipy.stats.multivariate_normal.pdf(yt[t-1],0, y_var)
             Wt[t][i] = likelihood * Wt[t-1][i]
             #Saving the values of the weights
-            Wt_resampled[t][i] = likelihood * Wt_resampled[t-1][i]
+            Wt_resampled[t][i] = likelihood #* Wt_resampled[t-1][i]
         #Normalize them for the calculations on resampling
         Wt[t] += 1.e-300
         Wt[t] /= np.sum(Wt[t])
@@ -114,92 +133,93 @@ def resample(n_particles, yt, params):
                 index += 1
             Xt_resampled[t][p] = Xt_resampled[t][index]
             offset = offset + 1/n_particles
+        Wt[t].fill(1/np.sum(Wt[t]))
         #Here weights should be uniformed
         #for i in range(n_particles):
         #    Wt[t][i] = 1/np.sum(Wt[t])
-    return Xt_resampled, Wt_resampled
+    if betaLogLikelihood == True:
+        return Xt_resampled, Wt_resampled
+    else:
+        return Xt_resampled, Wt
 
-def plotSMC(Xt):
+def plotSMC(Xt, Wt):
     variance_nores = np.zeros(len(Xt))
-    mean_nores = np.zeros(len(Xt))
+    estimator = np.zeros(len(Xt))
     for t in range(len(Xt)):
-        variance_nores[t] = np.var(Xt[t])
-        mean_nores[t] = np.sum(Xt[t])/len(Xt[0])
-    #plt.plot(np.linspace(-3,3,501), variance_nores)
-    plt.plot(np.linspace(-1,500,501), mean_nores)
-    plt.gca().fill_between(np.linspace(-1,500,501), mean_nores-np.sqrt(variance_nores), mean_nores+np.sqrt(variance_nores), color="#dddddd")
-    plt.title('SMC without systematic resampling')
+        variance_nores[t] = np.var(Xt[t], ddof=1)
+        estimator_index = np.argmax(Wt[t])
+        estimator[t] = Xt[t][estimator_index]
+    print("SMC no resampling, average of variances", np.mean(variance_nores))
+    plt.plot(np.linspace(-1,len(Xt), len(Xt)), estimator)
+    plt.gca().fill_between(np.linspace(-1,len(Xt),len(Xt)),estimator - np.sqrt(variance_nores),estimator + np.sqrt(variance_nores), color="#dddddd")
+    plt.title('SMC no resampling, average of variances')
     plt.show()
 
 
-def plotResampling(Xt_resampled):
-    mean_res = np.zeros(len(Xt_resampled))
+def plotResampling(Xt_resampled, Wt_resampled):
+    estimator = np.zeros(len(Xt_resampled))
     variance_resampling = np.zeros(len(Xt_resampled))
     for t in range(len(Xt_resampled)):
-        variance_resampling[t] = np.var(Xt_resampled[t])
-        mean_res[t] = np.sum(Xt_resampled[t])/len(Xt_resampled[0])
-    #plt.plot(np.linspace(-3,3,501), variance_resampling)
-    plt.plot(np.linspace(-1,500,501), mean_res)
-    plt.gca().fill_between(np.linspace(-1,500,501), mean_res-np.sqrt(variance_resampling), mean_res+np.sqrt(variance_resampling), color="#dddddd")
-    plt.title('SMC with the systematic resampling')
+        variance_resampling[t] = np.var(Xt_resampled[t], ddof=1)
+        estimator_index = np.argmax(Wt_resampled[t])
+        estimator[t] = Xt_resampled[t][estimator_index]
+        #plt.plot(np.linspace(-3,3,501), variance_resampling)
+    print("Resampling SMC, average of variances", np.mean(variance_resampling))
+    plt.plot(np.linspace(-1,len(Xt_resampled), len(Xt_resampled)), estimator)
+    plt.gca().fill_between(np.linspace(-1,len(Xt_resampled),len(Xt_resampled)), estimator-np.sqrt(variance_resampling), estimator+np.sqrt(variance_resampling), color="#dddddd")
+    plt.title('Resampling SMC, average of variances')
     plt.show()
 
 def betaLikelihood(n_particles, yt, params,SMC_count):
     T = len(yt)
-    betas = np.zeros(10)
-    syntetic_beta = params[2]
-    print(syntetic_beta)
-    betas[0] = 0.05
-    for i in range(1, len(betas)):
-        betas[i] = syntetic_beta*i
+    betas = sampleBetas(10)
+    likelihoods = np.zeros((len(betas), SMC_count))
     for b,beta in enumerate(betas):
-        #changing the value of the vector with another beta
         params[2] = beta
-        _, Wt_resampled = resample(n_particles, yt,params)
-        #print(Wt_resampled)
-        likelihoods = np.zeros(SMC_count)
         for run_count in range(SMC_count):
-            likelihoods[run_count]=0
+            _, Wt_resampled = resample(n_particles, yt,params, beta, True)
+            likelihoods[b][run_count]=0
+            print("Beta ", b, "Round, ", run_count)
             for t in range(T + 1):
                 inner_term = 0
                 for n in range(n_particles):
                     inner_term += Wt_resampled[t][n]
-                likelihoods[run_count] += np.log(inner_term) - np.log(n_particles)
-        variance = np.var(likelihoods, dtype=np.float64)
-        mean = np.sum(likelihoods) / SMC_count
-        print(beta, mean, variance)
-    #lebels =
-    #plt.boxplot(likelihoods, 0.75, 'rs',0, 0.25)
-    #print
-    #plt.show()
+                likelihoods[b][run_count] += np.log(inner_term) - np.log(n_particles)
+        variance = np.var(likelihoods[b], ddof=1)
+        #mean = np.sum(likelihoods) / SMC_count
+    list = []
+    for r in range(len(betas)):
+        list.append(likelihoods[r])
+    #print(list)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.boxplot(list,positions=betas,widths=(0.15), showfliers='false')
+    ax.set_xlabel("beta")
+    ax.set_ylabel("log-likelihood")
+
+    plt.show()
+
+def sampleBetas(N, syntetic_beta=None):
+    beta = np.zeros(N)
+    for n in range(N):
+        beta[n] =  np.random.uniform(0.00001, 2)
+    return beta
 
 def main():
     yt, params = readData()
-    T = 50
+    T = 500
+    # Data depends on how many observationes we observe
+    yt = yt[:T]
     n_particles = 10
     SMC_count = 10
 
-    betaLikelihood(n_particles, yt[:T], params, SMC_count)
+    Xt = generateXt(T, n_particles, params)
+    Wt = calculateSMC(Xt, yt, params, n_particles)
+    plotSMC(Xt, Wt)
 
+    Xt_resampled, Wt_resampled = resample(n_particles, yt, params)
+    plotResampling(Xt_resampled, Wt_resampled)
 
+    betaLikelihood(n_particles, yt, params, SMC_count)
 
-
-    #print(params)
-
-    #Wt = calculateSMC(Xt, yt, params, n_particles)
-    #for t in range(len(Xt)):
-    #    mean_nores[t] = np.sum(Xt[t])/len(Xt[0])
-    #plt.plot(np.linspace(-1,500, 501),mean_nores)
-    #plt.show()
-    #Xt = generateXt(T, n_particles, params)
-    #plotSMC(Xt)
-
-    #Xt_resampled, Wt_resampled = resample(n_particles, yt, params)
-    # w = np.ones(501)
-    # print(Wt_resampled)
-    # for i in range(501):
-    #     w[i] = np.sum(Wt_resampled[i])
-    # plt.plot(np.linspace(-1, 500, 501), w)
-    #plotResampling(Xt_resampled)
-    #plt.show()
 main()
