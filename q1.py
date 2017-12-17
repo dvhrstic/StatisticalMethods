@@ -152,7 +152,7 @@ def plotSMC(Xt, Wt):
     print("SMC no resampling, average of variances", np.mean(variance_nores))
     plt.plot(np.linspace(-1,len(Xt), len(Xt)), estimator)
     plt.gca().fill_between(np.linspace(-1,len(Xt),len(Xt)),estimator - np.sqrt(variance_nores),estimator + np.sqrt(variance_nores), color="#dddddd")
-    plt.title('SMC no resampling, average of variances')
+    plt.title('SMC no resampling')
     plt.show()
 
 
@@ -167,7 +167,7 @@ def plotResampling(Xt_resampled, Wt_resampled):
     print("Resampling SMC, average of variances", np.mean(variance_resampling))
     plt.plot(np.linspace(-1,len(Xt_resampled), len(Xt_resampled)), estimator)
     plt.gca().fill_between(np.linspace(-1,len(Xt_resampled),len(Xt_resampled)), estimator-np.sqrt(variance_resampling), estimator+np.sqrt(variance_resampling), color="#dddddd")
-    plt.title('Resampling SMC, average of variances')
+    plt.title('Resampling SMC')
     plt.show()
 
 def betaLikelihood(n_particles, yt, params,SMC_count):
