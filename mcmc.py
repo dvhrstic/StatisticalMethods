@@ -49,10 +49,11 @@ print(params)
 xt = generate_xt(T, params)
 t = np.random.randint(0, 500)
 N = 10
+n_samples = 1000
 betas = sampleBetas(N)
 beta_occ = np.zeros(N)
 x_curr = xt[t]
-for si in range(1000):
+for si in range(n_samples):
     for b,beta in enumerate(betas):
         params = np.append(params[:2], beta)
         x_prime, gt_prime,gt_curr = sample_xt_prim(xt, yt, params, t)
@@ -64,7 +65,27 @@ for si in range(1000):
         r = min(1.0, acc_prob)
         u = np.random.uniform()
         if(u < r):
-            x_curr = x_curr
+            x_curr = x_prime
             beta_occ[b] += 1
+
+bins = np.linspace(1, 10, 10)
+# print(beta_occ.astype(int).tolist())
+# plt.xlabel("Betas")
+# plt.ylabel("Frequency")
+# plt.hist(beta_occ.astype(int).tolist(), bins)
+# plt.show()
+plt.bar(betas, beta_occ, .06)
+plt.ylabel("Frequencies")
+plt.xlabel("Beta value")
+plt.title("Histogram")
+#plt.axis([0,100,0,n_samples + 5])
+plt.show()
+
+
+
+
+
+
+print(xt[t], x_curr)
 print(betas)
 print(beta_occ)
