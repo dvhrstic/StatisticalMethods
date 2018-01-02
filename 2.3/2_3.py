@@ -18,7 +18,7 @@ prob_sum =0
 def blocks_gibbs_sampling(n):
     #ipdb.set_trace()
     #first evaluate the value of the vertex switch settings given at the beginning
-    foo = [1.0, 2.0, 3.0]
+    foo = [1.0, 2.0]
     new_values = False
 
     probability_first_settings = prob_sum
@@ -45,11 +45,13 @@ def blocks_gibbs_sampling(n):
                 vertexSettings[vertex] = new_setting_value1
                 vertexSettings[vertex+1] = new_setting_value2
 
+                newSettingsValues2 = list(vertexSettings)
+
                 adjMatrix = add_switch_settings_to_matrix() #on modifie la matrice avec les settings 
                 prob_sum_intermediaire, probabilities, highest_prob = compute_probabilities_stop_position() #on calcule la nouvelle probabilité
                     
                 propabilities.append(prob_sum_intermediaire) # on garde la nouvelle probabilité
-                settings.append(vertexSettings) # on stocke l'échantillon
+                settings.append(newSettingsValues2) # on stocke l'échantillon
                 vertex = vertex + 2
     
     if n==3:
@@ -69,12 +71,14 @@ def blocks_gibbs_sampling(n):
                 vertexSettings[vertex+1] = new_setting_value2
                 vertexSettings[vertex+2] = new_setting_value3
 
+                newSettingsValues3 = list(vertexSettings)
+
 
                 adjMatrix = add_switch_settings_to_matrix() #on modifie la matrice avec les settings 
                 prob_sum_intermediaire, probabilities, highest_prob = compute_probabilities_stop_position() #on calcule la nouvelle probabilité
                     
                 propabilities.append(prob_sum_intermediaire) # on garde la nouvelle probabilité
-                settings.append(vertexSettings) # on stocke l'échantillon
+                settings.append(newSettingsValues3) # on stocke l'échantillon
                 vertex = vertex + 3
 
     if n==6:
@@ -99,20 +103,26 @@ def blocks_gibbs_sampling(n):
             vertexSettings[vertex+4] = new_setting_value5
             vertexSettings[vertex+5] = new_setting_value6
 
+            newSettingsValues6 = list(vertexSettings)
 
             adjMatrix = add_switch_settings_to_matrix() #on modifie la matrice avec les settings 
             prob_sum_intermediaire, probabilities, highest_prob = compute_probabilities_stop_position() #on calcule la nouvelle probabilité
                 
             propabilities.append(prob_sum_intermediaire) # on garde la nouvelle probabilité
-            settings.append(vertexSettings) # on stocke l'échantillon
+            settings.append(newSettingsValues6) # on stocke l'échantillon
 
     return propabilities, settings
 
+def changeVertexSettingsValues(n, settings, new):
+    set = settings[:]
+    set[n] = new
+    
+    return set
 
 def gibbs_sampling():
     #ipdb.set_trace()
     #first evaluate the value of the vertex switch settings given at the beginning
-    foo = [1.0, 2.0, 3.0]
+    foo = [1.0, 2.0]
     print(random.choice(foo))
 
     new_values = False
@@ -121,8 +131,8 @@ def gibbs_sampling():
     propabilities = []
     settings = []
     #now change the values of the first element in the switch settings 
-    propabilities.append(probability_first_settings)
-    settings.append(vertexSettings)
+    #propabilities.append(probability_first_settings)
+    #settings.append(vertexSettings)
 
     #do gibbs sampling 1000 times to get more values
     for i in range(1000): 
@@ -136,14 +146,16 @@ def gibbs_sampling():
                     break
 
             vertexSettings[vertex] = new_setting_value
+            #newSettingsValues = changeVertexSettingsValues(vertex,vertexSettings,new_setting_value)
+            newSettingsValues = list(vertexSettings)
 
             adjMatrix = add_switch_settings_to_matrix() #on modifie la matrice avec les settings 
             prob_sum_intermediaire, probabilities, highest_prob = compute_probabilities_stop_position() #on calcule la nouvelle probabilité
                 
             propabilities.append(prob_sum_intermediaire) # on garde la nouvelle probabilité
-            settings.append(vertexSettings) # on stocke l'échantillon
-        
-      
+            settings.append(newSettingsValues) # on stocke l'échantillon
+            
+
     return propabilities, settings
 
 def add_switch_settings_to_matrix():
@@ -303,13 +315,12 @@ if __name__ == '__main__':
 
     print("highest probability", highest_prob)
 
-
-    all_settings_probabilities, all_settings = gibbs_sampling()
-    #all_settings_probabilities, all_settings = blocks_gibbs_sampling(3)
+    #all_settings_probabilities, all_settings = gibbs_sampling()
+    all_settings_probabilities, all_settings = blocks_gibbs_sampling(2)
 
     
     #print("all_settings_probabilities : ",all_settings_probabilities)
-    #print("")
+    print("")
     #print("all_settings : ",all_settings)
 
     index = all_settings_probabilities.index(max(all_settings_probabilities))
